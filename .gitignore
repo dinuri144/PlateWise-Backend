@@ -1,0 +1,21 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env*
+!.env.example
+
+# Generated files
+/generated/prisma
+
+# Local AI coding tool settings
+.agents/
+.claude/
+.windsurf/

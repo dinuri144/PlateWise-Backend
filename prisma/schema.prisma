@@ -1,0 +1,220 @@
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username String @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile       Profile?
+  food          Food[]
+  foodLogs      FoodLog[]
+  pantryItems   PantryItem[]
+  recipes       Recipe[]
+  shoppingItems ShoppingItem[]
+}
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  age           Int?
+  heightCm      Float?
+  currentWeight Float?
+  activityLevel String?
+  goalType      String?
+  targetWeight  Float?
+  calorieTarget Int?
+  proteinTarget Int?
+  weeklyBudget  Int?
+
+  allergies          String[] @default([])
+  dietaryPreferences String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+model Food {
+  id           String   @id @default(cuid())
+  name         String
+  category     String?
+  servingUnit  String   @default("100g")
+  servingGrams Float    @default(100)
+  calories     Float
+  protein      Float
+  carbs        Float?
+  fat          Float?
+  isCustom     Boolean  @default(false)
+  userId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logItems    FoodLogItem[]
+  pantryItems PantryItem[]
+
+  @@index([name])
+  @@index([userId])
+}
+
+model FoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  mealType  MealType
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items FoodLogItem[]
+
+  @@unique([userId, date, mealType])
+  @@index([userId, date])
+}
+
+model FoodLogItem {
+  id        String   @id @default(cuid())
+  foodLogId String
+  foodId    String
+  quantity  Float
+  unit      String   @default("g")
+  grams     Float
+  calories  Float
+  protein   Float
+  createdAt DateTime @default(now())
+
+  foodLog FoodLog @relation(fields: [foodLogId], references: [id], onDelete: Cascade)
+  food    Food    @relation(fields: [foodId], references: [id])
+
+  @@index([foodLogId])
+  @@index([foodId])
+}
+
+model PantryItem {
+  id     String @id @default(cuid())
+  userId String
+  foodId String?
+
+  name       String
+  category   String?
+  quantity   Float
+  unit       String   @default("g")
+  expiryDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food Food? @relation(fields: [foodId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiryDate])
+  @@index([foodId])
+}
+
+model Recipe {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+
+  mealType MealType
+  cuisine  String?
+
+  servings        Int  @default(1)
+  prepTimeMinutes Int?
+
+  caloriesPerServing Float
+  proteinPerServing  Float
+  carbsPerServing    Float?
+  fatPerServing      Float?
+
+  instructions String
+
+  isActive Boolean @default(true)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  ingredients RecipeIngredient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  servingSizeGrams Float?
+
+  nutritionSource   String?
+  nutritionVerified Boolean @default(false)
+
+  sourceName String?
+  sourceUrl  String?
+
+  dietaryTags String[] @default([])
+  allergens   String[] @default([])
+
+  @@index([mealType])
+  @@index([name])
+  @@index([userId])
+}
+
+model RecipeIngredient {
+  id String @id @default(cuid())
+
+  recipeId       String
+  ingredientName String
+
+  quantity Float
+  unit     String @default("g")
+
+  isOptional Boolean @default(false)
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([ingredientName])
+}
+
+model ShoppingItem {
+  id     String @id @default(cuid())
+  userId String
+
+  name     String
+  quantity Float?
+  unit     String @default("item")
+
+  isPurchased Boolean @default(false)
+
+  // MANUAL or RECIPE
+  source String @default("MANUAL")
+
+  // Recipes that contributed this ingredient
+  recipeNames String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isPurchased])
+  @@index([name])
+}
